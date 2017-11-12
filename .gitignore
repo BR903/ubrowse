@@ -1,0 +1,5 @@
+*.o
+ubrowse
+blocklist.c
+charlist.c
+*.tar.gz
