@@ -439,8 +439,8 @@ static int jumpui(int index)
     return lookupchar(value);
 }
 
-/* Display the Unicode version the program was built with. Silently do
- * nothing if no version string is available.
+/* Display the Unicode version the program was built with. Alert if no
+ * version string is available.
  */
 static void showversion(void)
 {
@@ -448,6 +448,8 @@ static void showversion(void)
 	mvaddstr(lastrow, 0, "Unicode version ");
 	addstr(unicodeversion);
 	(void)getch();
+    } else {
+	beep();
     }
 }
 
