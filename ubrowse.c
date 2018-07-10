@@ -281,7 +281,7 @@ static int ioinit(void)
 
 /* Translate a key event from ncurses. Special keys that represent
  * controls are translated to appropriate ASCII equivalents. If the
- * terminal is resized, the program automatically updates the
+ * terminal is resized, the function automatically updates the
  * variables defining the display area.
  */
 static int translatekey(int key)
@@ -295,12 +295,12 @@ static int translatekey(int key)
       case KEY_LEFT:		return '<';
       case KEY_DOWN:		return '+';
       case KEY_UP:		return '-';
-      case ' ':			return 'f';
-      case KEY_NPAGE:		return 'f';
-      case KEY_PPAGE:		return 'b';
-      case KEY_BACKSPACE:	return 'b';
-      case '\010':		return 'b';
-      case '\177':		return 'b';
+      case ' ':			return 'F';
+      case KEY_NPAGE:		return 'F';
+      case KEY_PPAGE:		return 'B';
+      case KEY_BACKSPACE:	return 'B';
+      case '\010':		return 'B';
+      case '\177':		return 'B';
       case KEY_ENTER:		return '\n';
       case '\r':		return '\n';
       case 'h':			return '?';
@@ -533,11 +533,11 @@ static int blockselectui(int index)
 	if (selected >= blocklistsize)
 	    selected = blocklistsize - 1;
 	drawblocklist(selected);
-	switch (tolower(translatekey(getch()))) {
+	switch (translatekey(getch())) {
 	  case '+':	++selected;				break;
 	  case '-':	--selected;				break;
-	  case 'f':	selected += ytermsize - 1;		break;
-	  case 'b':	selected -= ytermsize - 1;		break;
+	  case 'F':	selected += ytermsize - 1;		break;
+	  case 'B':	selected -= ytermsize - 1;		break;
 	  case '{':	selected = 0;				break;
 	  case '}':	selected = blocklistsize;		break;
 	  case '?':	showblockhelptext();			break;
@@ -649,7 +649,7 @@ static void showmainhelptext(void)
 	"Down   Move forward one row         Up     Move back one row",
 	"}      Move forward by U+1000       {      Move back by U+1000",
 	"[      Add another column           ]      Reduce number of columns",
-	"U      Go to a specific codepoint   S      Select a block to jump to",
+	"U or S Go to a specific codepoint   J or B Jump to a selected block",
 	"/      Search forward for a codepoint name containing a substring",
 	"N      Repeat the last search       P      To previous search result",
 	"V      Display Unicode version      ?      Display this help text",
@@ -695,15 +695,17 @@ static void mainui(int index)
 	  case '-':	--index;				break;
 	  case '>':	index += ytermsize - 1;			break;
 	  case '<':	index -= ytermsize - 1;			break;
-	  case 'f':	index += tablesize;			break;
-	  case 'b':	index -= tablesize;			break;
+	  case 'F':	index += tablesize;			break;
+	  case 'B':	index -= tablesize;			break;
 	  case '}':	index = offsetchar(index, +0x1000);	break;
 	  case '{':	index = offsetchar(index, -0x1000);	break;
 	  case '/':	index = searchui(index, 0);		break;
 	  case 'n':	index = searchui(index, +1);		break;
 	  case 'p':	index = searchui(index, -1);		break;
 	  case 'u':	index = jumpui(index);			break;
-	  case 's':	index = blockselectui(index);		break;
+	  case 's':	index = jumpui(index);			break;
+	  case 'j':	index = blockselectui(index);		break;
+	  case 'b':	index = blockselectui(index);		break;
 	  case '[':	++columncount;				break;
 	  case ']':	--columncount;				break;
 	  case '?':	showmainhelptext();			break;
