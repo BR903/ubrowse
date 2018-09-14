@@ -9,8 +9,8 @@ CFLAGS += -Os -I/usr/include/ncursesw
 LDFLAGS = -Wall -s
 LOADLIBES = -lncursesw
 
-CHARLISTURL = http://www.unicode.org/Public/UNIDATA/UnicodeData.txt
-BLOCKLISTURL = http://www.unicode.org/Public/UNIDATA/Blocks.txt
+CHARLISTURL = https://www.unicode.org/Public/UNIDATA/UnicodeData.txt
+BLOCKLISTURL = https://www.unicode.org/Public/UNIDATA/Blocks.txt
 
 .PHONY: clean clean-all
 
