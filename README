@@ -14,7 +14,7 @@ ncurses library's wide character functions.
 To build, simply run "make". The build process will attempt to
 download data files for the current Unicode standard using curl(1), so
 you will need a working internet connection the first time you build
-(and for any build done after running "make clean").
+(and for any build done after running "make clean-all").
 
 All necessary data is compiled in, so that the resulting executable
 can run standalone. If you wish to install the program to a shared

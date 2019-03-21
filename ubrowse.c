@@ -41,7 +41,7 @@
 
 /* The value of the highest possible Unicode codepoint.
  */
-static unsigned long const lastucharval = 0x10FFFF;
+static unsigned int const lastucharval = 0x0010FFFF;
 
 /* Online help for program invocation.
  */
@@ -65,7 +65,7 @@ static char const *yowzitch[] = {
 /* Version information.
  */
 static char const *vourzhon[] = {
-    "ubrowse: Unicode character set browser, version 1.3",
+    "ubrowse: Unicode character set browser, version 1.4",
     "Copyright (C) 2013-2017 by Brian Raiter <breadbox@muppetlabs.com>",
     "This is free software; you are free to change and redistribute it.",
     "There is NO WARRANTY, to the extent permitted by law."
@@ -89,13 +89,17 @@ static int const mincolumnwidth = 8;
 static int xtermsize, ytermsize, lastrow;
 
 /* Combining characters are displayed by combining them with this
- * character.
+ * character (by default the middle-dot, to make the placement clear).
  */
 static wchar_t accentchar = 0x00B7;
 
 /* If false, combining characters are not displayed.
  */
 static int showcombining = TRUE;
+
+/*
+ * Lookup functions
+ */
 
 /* Find the codepoint with the value uchar in the charlist array and
  * return its index. If uchar doesn't map to a defined codepoint,
@@ -210,9 +214,9 @@ static int readuchar(char const *input)
     value = strtoul(input, &p, 16);
     if (*p || p == input || (value == ULONG_MAX && errno == ERANGE))
 	return -1;
-    if (value > lastucharval)
+    if (value > (unsigned long)lastucharval)
 	return -1;
-    return lookupchar(value);
+    return lookupchar((int)value);
 }
 
 /* If str points to a string containing a single codepoint (according
@@ -308,6 +312,53 @@ static int translatekey(int key)
     }
     return tolower(key);
 }
+
+/* Wait for the user to press a key and return, or exit if ctrl-C is
+ * pressed.
+ */
+static void anykey(void)
+{
+    mvaddstr(lastrow, 0, "[Press any key to continue]");
+    clrtoeol();
+    if (getch() == '\003')
+	exit(EXIT_SUCCESS);
+}
+
+/* Display a string of text at the given position. If the text is too
+ * long to fit on a single line, it is broken at a word boundary. (The
+ * text is assumed to only use a single ASCII space between words.)
+ * The return value is the y-value of the line immediately following
+ * the end the of the displayed text.
+ */
+static int drawtext(int y, int x, char const *text, int size)
+{
+    int n;
+
+    while (size) {
+	if (size <= xtermsize - x) {
+	    mvaddnstr(y++, x, text, size);
+	    break;
+	}
+	for (n = xtermsize - x ; n ; --n)
+	    if (text[n] == ' ')
+		break;
+	if (n == 0) {
+	    n = xtermsize - x;
+	    mvaddnstr(y++, x, text, n);
+	    text += n;
+	    size -= n;
+	} else {
+	    mvaddnstr(y++, x, text, n);
+	    text += n + 1;
+	    size -= n + 1;
+	}
+    }
+    return y;
+}
+
+/*
+ * User interface functions
+ */
 
 /* Allow the user to input a string. The first parameter supplies the
  * input buffer that will receive the string. The second parameter
@@ -425,18 +476,17 @@ static int searchui(int index, int repeat)
 static int jumpui(int index)
 {
     char buf[7];
-    unsigned long value;
     int n;
 
     n = doinputui(buf, sizeof buf, "U+", isxdigit);
     if (n < 0)
 	return index;
-    value = strtoul(buf, NULL, 16);
-    if (value > lastucharval) {
+    n = readuchar(buf);
+    if (n < 0) {
 	beep();
 	return index;
     }
-    return lookupchar(value);
+    return n;
 }
 
 /* Display the Unicode version the program was built with. Alert if no
@@ -476,8 +526,7 @@ static void showblockhelptext(void)
     }
     move(i, 0);
     clrtoeol();
-    mvaddstr(lastrow, 0, "[Press any key to continue]");
-    (void)getch();
+    anykey();
 }
 
 /* Display a full screen's worth of the block table, centered as
@@ -557,6 +606,87 @@ static int blockselectui(int index)
 	}
     }
     return lookupchar(blocklist[selected].from);
+}
+
+/* Display a screen showing various encodings for a single character.
+ * The character is also displayed as bold and unbold, as many
+ * terminals actually use a different font for these, which can mean
+ * that the character can have a notably different appearance in each.
+ */
+static int showcharinfo(int index)
+{
+    unsigned char utf8[8];
+    wchar_t wch[3];
+    cchar_t cch;
+    char const *name;
+    int namesize, utf8size;
+    int uchar;
+    int i, y;
+
+    uchar = charlist[index].uchar;
+    name = charnamebuffer + charlist[index].nameoffset;
+    namesize = charlist[index].namesize;
+
+    if (charlist[index].combining) {
+	wch[0] = ' ';
+	wch[1] = uchar;
+	wch[2] = L'\0';
+    } else {
+	wch[0] = uchar;
+	wch[1] = L'\0';
+    }
+
+    if (uchar < 0x0080) {
+	utf8[0] = uchar;
+	utf8size = 1;
+    } else {
+	utf8[0] = 0x80 | (uchar & 0x3F);
+	if (uchar < 0x0800) {
+	    utf8[1] = 0xC0 | ((uchar >> 6) & 0x1F);
+	    utf8size = 2;
+	} else {
+	    utf8[1] = 0x80 | ((uchar >> 6) & 0x3F);
+	    if (uchar < 0x00010000) {
+		utf8[2] = 0xE0 | ((uchar >> 12) & 0x0F);
+		utf8size = 3;
+	    } else {
+		utf8[2] = 0x80 | ((uchar >> 12) & 0x3F);
+		utf8[3] = 0xF0 | ((uchar >> 18) & 0x07);
+		utf8size = 4;
+	    }
+	}
+    }
+
+    clear();
+    setcchar(&cch, wch, 0, 0, NULL);
+    mvadd_wch(1, 0, &cch);
+    setcchar(&cch, wch, A_BOLD, 0, NULL);
+    mvadd_wch(1, 32, &cch);
+    mvprintw(3, 0, "U+%04X", uchar);
+    move(3, 10);
+    y = drawtext(3, 10, name, namesize) + 1;
+    mvaddstr(y++, 0, "       UTF-16: ");
+    if (uchar < 0x00010000)
+	printw("0x%04X", uchar);
+    else
+	printw("0x%04X 0x%04X", 0xD800 | ((uchar - 0x00010000) >> 10),
+                                0xDC00 | ((uchar - 0x00010000) & 0x03FF));
+    mvaddstr(y++, 0, "        UTF-8:");
+    for (i = utf8size ; i-- ; )
+	printw(" 0x%02X", utf8[i]);
+    mvaddstr(y++, 0, "C octal UTF-8: ");
+    for (i = utf8size ; i-- ; )
+	printw("\\%03o", utf8[i]);
+    mvprintw(y++, 0, "   XML entity: &#%u;", uchar);
+    i = wcwidth(uchar);
+    if (i < 0)
+	mvaddstr(y, 0, "        width: n/a");
+    else
+	mvprintw(y, 0, "display width: %d", i);
+
+    anykey();
+    clearok(stdscr, TRUE);
+    return index;
 }
 
 /* Display the index-th character at location (y, x) using colwidth
@@ -652,7 +782,7 @@ static void showmainhelptext(void)
 	"}      Move forward by U+1000       {      Move back by U+1000",
 	"[      Add another column           ]      Reduce number of columns",
 	"U or S Go to a specific codepoint   J or B Jump to a selected block",
-	"/      Search forward for a codepoint name containing a substring",
+	"I      Show info for top codepoint  /      Search for string in name",
 	"N      Repeat the last search       P      To previous search result",
 	"V      Display Unicode version      ?      Display this help text",
 	"^L     Redraw the screen            Q      Exit the program"
@@ -668,8 +798,7 @@ static void showmainhelptext(void)
     }
     move(i, 0);
     clrtoeol();
-    mvaddstr(lastrow, 0, "[Press any key to continue]");
-    (void)getch();
+    anykey();
 }
 
 /* Render a view of the character table as per the user's keyboard
@@ -710,6 +839,7 @@ static void mainui(int index)
 	  case 'b':	index = blockselectui(index);		break;
 	  case '[':	++columncount;				break;
 	  case ']':	--columncount;				break;
+	  case 'i':	showcharinfo(index);			break;
 	  case '?':	showmainhelptext();			break;
 	  case 'v':	showversion();				break;
 	  case '\f':	clearok(stdscr, TRUE);			break;
@@ -718,6 +848,10 @@ static void mainui(int index)
 	}
     }
 }
+
+/*
+ * Top-level functions
+ */
 
 /* Parse the command-line arguments. The return value is the initial
  * codepoint specified on the command-line, or 0 if no initial
