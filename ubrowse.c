@@ -455,8 +455,11 @@ static int searchui(int index, int repeat)
 	n = doinputui(searchstring, sizeof searchstring, "/", isprint);
 	if (n < 0)
 	    return index;
-	if (n == 0)
+	if (n == 0) {
 	    n = findcharbyname(NULL, index, +1);
+	    if (n < 0)
+		return index;
+	}
 	while (n--)
 	    searchstring[n] = tolower(searchstring[n]);
 	n = findcharbyname(searchstring, index, +1);
