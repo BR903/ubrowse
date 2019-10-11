@@ -662,7 +662,7 @@ static int showcharinfo(int index)
 
     clear();
     setcchar(&cch, wch, 0, 0, NULL);
-    mvadd_wch(1, 0, &cch);
+    mvadd_wch(1, 1, &cch);
     setcchar(&cch, wch, A_BOLD, 0, NULL);
     mvadd_wch(1, 32, &cch);
     mvprintw(3, 0, "U+%04X", uchar);
