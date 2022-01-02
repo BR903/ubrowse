@@ -36,6 +36,7 @@
 #include <wchar.h>
 #include <locale.h>
 #include <getopt.h>
+#include <unistd.h>
 #include <ncurses.h>
 #include "data.h"
 
@@ -49,9 +50,11 @@ static char const *yowzitch[] = {
     "Usage: ubrowse [OPTIONS] [CHAR | CODEPOINT | STRING]",
     "Display Unicode characters in a scrolling table.",
     "",
-    "  -a, --accent=C    Specify codepoint C to use when rendering combining",
+    "  -a, --accent=CH   Specify codepoint CH to use when rendering combining",
     "                    accent characters (default is U+00B7).",
     "  -A, --noaccent    Suppress display of combining accent characters.",
+    "  -i, --input       Display names of codepoints from standard input",
+    "                    (default when output is not a terminal).",
     "      --help        Display this online help.",
     "      --version     Display version information.",
     "",
@@ -65,7 +68,7 @@ static char const *yowzitch[] = {
 /* Version information.
  */
 static char const *vourzhon[] = {
-    "ubrowse: Unicode character set browser, version 1.4",
+    "ubrowse: Unicode character set browser, version 1.5",
     "Copyright (C) 2013-2017 by Brian Raiter <breadbox@muppetlabs.com>",
     "This is free software; you are free to change and redistribute it.",
     "There is NO WARRANTY, to the extent permitted by law."
@@ -96,6 +99,11 @@ static wchar_t accentchar = 0x00B7;
 /* If false, combining characters are not displayed.
  */
 static int showcombining = TRUE;
+
+/* If true, then instead of enabling curses, characters from stdin are
+ * echoed to stdout along with their Unicode names.
+ */
+static int readstdin = FALSE;
 
 /*
  * Lookup functions
@@ -231,6 +239,40 @@ static int readsinglecharstring(char const *str)
     if (sscanf(str, "%lc", &ch) == 1 && sscanf(str, "%*lc%*c") == EOF)
 	return lookupchar(ch);
     return -1;
+}
+
+/*
+ * Echo mode
+ */
+
+/* Instead of displaying a table, this function reads characters from
+ * standard input and echoes them back to standard output, one per
+ * line, with the codepoint's full name displayed alongside.
+ */
+static void showinputchars(void)
+{
+    char buf[16];
+    wint_t wch;
+    int width, n;
+
+    for (;;) {
+        wch = getwchar();
+        if (wch == WEOF)
+            return;
+        n = lookupchar(wch);
+        if (wch != charlist[n].uchar)
+            continue;
+        sprintf(buf, "U+%04X", wch);
+        width = wcwidth(wch);
+        if (width > 0)
+            printf("%lc%*s", wch, 4 - width, "");
+        else if (charlist[n].combining && showcombining)
+            printf("%lc%lc   ", accentchar, wch);
+        else
+            printf("    ");
+        printf("%-10s%.*s\n", buf, charlist[n].namesize,
+                              charnamebuffer + charlist[n].nameoffset);
+    }
 }
 
 /*
@@ -863,10 +905,11 @@ static void mainui(int index)
  */
 static int readcmdline(int argc, char *argv[])
 {
-    static char const *optstring = "a:A";
+    static char const *optstring = "a:Ai";
     static struct option options[] = {
 	{ "accent", required_argument, NULL, 'a' },
 	{ "noaccent", no_argument, NULL, 'A' },
+        { "input", no_argument, NULL, 'i' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "version", no_argument, NULL, 'v' },
 	{ 0, 0, 0, 0 }
@@ -874,6 +917,7 @@ static int readcmdline(int argc, char *argv[])
     char const *str;
     int ch, i;
 
+    readstdin = !isatty(0);
     while ((ch = getopt_long(argc, argv, optstring, options, NULL)) != EOF) {
 	switch (ch) {
 	  case 'a':
@@ -888,6 +932,9 @@ static int readcmdline(int argc, char *argv[])
 	    break;
 	  case 'A':
 	    showcombining = FALSE;
+	    break;
+	  case 'i':
+	    readstdin = TRUE;
 	    break;
 	  case 'h':
 	    for (i = 0 ; i < (int)(sizeof yowzitch / sizeof *yowzitch) ; ++i)
@@ -928,6 +975,11 @@ int main(int argc, char *argv[])
 
     setlocale(LC_ALL, "");
     startpos = readcmdline(argc, argv);
+    if (readstdin) {
+        showinputchars();
+        return 0;
+    }
+
     ioinit();
     mainui(startpos);
     return 0;
