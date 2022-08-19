@@ -1,45 +1,11 @@
-  About This Program
+This repository has been moved. For now you can find it at:
 
-This program provides a terminal-based browser for the Unicode
-character set, allowing the user to examine the range of characters,
-or at least the ones that their terminal supports. (Or, perhaps more
-to the point, to determine *which* ones their terminal supports.)
+    https://git.sr.ht/~breadbox/ubrowse
 
-The source code also provides a very simple example of using the
-ncurses library's wide character functions.
+An existing copy of the repository can be update with the command:
 
+    git remote set-url origin https://git.sr.ht/~breadbox/ubrowse
 
-  Building and Installing
+The home page for ubrowse remains unchanged:
 
-To build, simply run "make". The build process will attempt to
-download data files for the current Unicode standard using curl(1), so
-you will need a working internet connection the first time you build
-(and for any build done after running "make clean-all").
-
-All necessary data is compiled in, so that the resulting executable
-can run standalone. If you wish to install the program to a shared
-location, just use cp(1).
-
-
-  License
-
-Copyright (C) 2013-2017 Brian Raiter <breadbox@muppetlabs.com>
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    https://www.muppetlabs.com/~breadbox/software/ubrowse.html
